@@ -4,3 +4,4 @@
 /test.ipynb
 /tmp.txt
 *.json
+__pycache__
