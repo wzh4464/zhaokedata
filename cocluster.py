@@ -63,10 +63,10 @@ class CoCluster:
         D_u = D[: self.m, : self.m]
         D_v = D[self.m :, self.m :]
         
-        M = np.dot(fractional_matrix_power(D_u, -0.5), np.dot(B, fractional_matrix_power(D_v, -0.5)))
+        M = np.dot(fractional_matrix_power(D_u, -0.5), np.dot(self.B, fractional_matrix_power(D_v, -0.5)))
         
         # SVD decomposition, first k singular vectors
-        U, S, Vh = svds(M, k=k)
+        U, S, Vh = svds(M, self.k)
         
         F = np.vstack((U, Vh.T))
 
