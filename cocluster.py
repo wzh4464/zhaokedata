@@ -57,16 +57,7 @@ class CoCluster:
         - The co-clustered matrix after the co-clustering process.
         """
 
-        A = self.create_A(self.B)
-        D = np.diag(np.sum(A, axis=1))
-        
-        D_u = D[: self.m, : self.m]
-        D_v = D[self.m :, self.m :]
-        
-        M = np.dot(fractional_matrix_power(D_u, -0.5), np.dot(self.B, fractional_matrix_power(D_v, -0.5)))
-        
-        # SVD decomposition, first k singular vectors
-        U, S, Vh = svds(M, self.k)
+        U, _, Vh = self.co_SVD()
         
         F = np.vstack((U, Vh.T))
 
@@ -80,6 +71,71 @@ class CoCluster:
         vis_B = vis_B[:, labele_v.argsort()]
 
         return vis_B, labele_u, labele_v
+
+    def co_SVD(self):
+        M, D_u, D_v = self.create_M()
+
+        # SVD decomposition, first k singular vectors
+        try:
+            U, S, Vh = svds(M, self.k)
+            if np.isnan(U).any() or np.isnan(S).any() or np.isnan(Vh).any() or np.isinf(U).any() or np.isinf(S).any() or np.isinf(Vh).any():
+                raise ValueError("Invalid values in U, S, or Vh")
+        except ValueError as e:
+            self._handle_value_error(e, D_u, 'D_v: ', D_v)
+            return None, None, None
+
+        # descending order
+        idx = np.argsort(S)[::-1]
+        U = U[:, idx]
+        S = S[idx]
+        Vh = Vh[idx, :]
+
+        return U, S, Vh
+
+    def create_M(self):
+        A = self.create_A(self.B)
+        B = self.B
+        D = np.diag(np.sum(A, axis=1))
+
+        D_u = D[: self.m, : self.m]
+        D_v = D[self.m :, self.m :]
+
+        try:
+            D_u_minus_squre = fractional_matrix_power(D_u, -0.5)
+            D_v_minus_squre = fractional_matrix_power(D_v, -0.5)
+        except Exception as e:
+            return self._handle_create_M_error(e, D_u, D_v)
+        # return np.dot(
+        #     np.dot(D_u_minus_squre, A), D_v_minus_squre
+        # ), D_u, D_v
+
+        try:
+            result = np.dot(
+                np.dot(D_u_minus_squre, B), D_v_minus_squre
+            )
+        except Exception as e:
+            self._handle_value_error(e, D_u_minus_squre, 'A: ', B)
+            print(f"D_v: {D_v_minus_squre}")
+            raise e
+
+        return result, D_u, D_v
+
+    def _handle_value_error(self, e, arg1, arg2, arg3):
+        print(f"Error: {e}")
+        print(f"D_u: {arg1}")
+        print(f"{arg2}{arg3}")
+
+    def _handle_create_M_error(self, e, D_u, D_v):
+        print(f"Error: {e}")
+
+        # from diagonal matrix to vector (1D array) (D_u = D_u[i,i])
+        D_u = np.diag(D_u)
+        D_v = np.diag(D_v)
+
+        print(f"D_u: {D_u}")
+        print(f"D_v: {D_v}")
+        
+        raise e
 
 if __name__ == "__main__":
     B = np.array(
