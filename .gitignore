@@ -5,3 +5,4 @@
 /tmp.txt
 *.json
 __pycache__
+*.txt
